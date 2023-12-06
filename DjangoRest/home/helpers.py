@@ -1,5 +1,4 @@
-
-from typing import Dict
+'''from typing import Dict
 from django.core.paginator import EmptyPage
 from rest_framework.exceptions import ValidationError
 
@@ -60,3 +59,46 @@ def stringify_error_message(message: Dict) -> str:
         _str += "\n".join(f"{key}-{msg}" for msg in message[key]) + "\n "
 
     return _str.rstrip()
+'''
+
+
+
+from typing import Dict
+from django.core.paginator import EmptyPage
+from rest_framework.exceptions import ValidationError
+
+
+def paginate(data, paginator, pagenumber, pagesize):
+    """
+    This method creates the paginated results in list API views.
+    """
+
+    if int(pagenumber) > paginator.num_pages:
+        raise ValidationError("Not enough pages", code=404)
+    try:
+        previous_page_number = paginator.page(pagenumber).previous_page_number()
+    except EmptyPage:
+        previous_page_number = None
+    try:
+        next_page_number = paginator.page(pagenumber).next_page_number()
+    except EmptyPage:
+        next_page_number = None
+
+    # Calculate the start and end indexes based on the page number and page size
+    start_index = (int(pagenumber) - 1) * pagesize
+    end_index = start_index + pagesize
+
+    return {
+        'pagination': {
+            'previous_page': previous_page_number,
+            'is_previous_page': paginator.page(pagenumber).has_previous(),
+            'next_page': next_page_number,
+            'is_next_page': paginator.page(pagenumber).has_next(),
+            'start_index': start_index + 1,
+            'end_index': min(end_index, paginator.count),
+            'total_entries': paginator.count,
+            'total_pages': paginator.num_pages,
+            'page': int(pagenumber)
+        },
+        'results': data[start_index:end_index]
+    }

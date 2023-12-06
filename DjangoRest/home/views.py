@@ -187,8 +187,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.authentication import TokenAuthentication
 from django.core.paginator import Paginator
 from .helpers import paginate
+from rest_framework.exceptions import ValidationError
 
 
+'''
 class TodoView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [TokenAuthentication]
@@ -212,6 +214,36 @@ class TodoView(APIView):
             'message': "Todo Retrieved Successfully",
             'data': {'data':serializer.data, 'paginator':results['pagination']}
         })
+'''
+
+class TodoView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def get(self, request):
+        todo_objs = Todo.objects.filter(user=request.user)
+        
+        page = request.GET.get('page', 1)
+        page_size = 3  # Set the desired page size to 2
+        page_obj = Paginator(todo_objs, page_size)
+        
+        try:
+            results = paginate(todo_objs, page_obj, page, page_size)
+        except ValidationError as e:
+            return Response({
+                'status': False,
+                'message': str(e.detail),
+                'data': None
+            }, status=e.status_code)
+        
+        serializer = TodoSerializer(results['results'], many=True)
+        return Response({
+            'status': True,
+            'message': "Todo Retrieved Successfully",
+            'data': {'data': serializer.data, 'paginator': results['pagination']}
+        })
+
+
 
     def post(self, request):
         data = request.data
